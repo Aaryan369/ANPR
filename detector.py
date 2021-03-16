@@ -1,34 +1,66 @@
 import cv2 as cv
 import numpy as np
 
+#variables
+nPlateCascade = cv.CascadeClassifier("resources/haarcascades/indian_license_plate.xml")
+image_extensions = ["png", "jpg", "jpeg"]
+
+#functions
+def find_roi(path):
+	extension = path.split(".")[-1]
+	if extension in image_extensions:
+		scanning_image(path)
+	else:
+		scanning_video(path)
+
 def find_plate(img):
 	plate_rect = nPlateCascade.detectMultiScale(img, scaleFactor = 1.3, minNeighbors = 7)
 
+	if len(plate_rect) == 0:
+		return None, None
+
 	for (x,y,w,h) in plate_rect:
-		a,b = 0,0
-		a,b = (int(0.02*img.shape[0]), int(0.025*img.shape[1])) 
-		plate = img[y+a:y+h-a, x+b:x+w-b, :]
 		cv.rectangle(img, (x,y), (x+w, y+h), (0,0,255), 3)
 		plate_img = img[y:y+h,x:x+w]
-		#print(x,y,w,h)
-		cv.imshow("plate",plate_img)
-	
+		
+		roi_coords = [x,y,w,h]
 
-nPlateCascade = cv.CascadeClassifier("resources/haarcascades/indian_license_plate.xml")
+		#print("returning",roi_coords)
+		return plate_img, roi_coords
 
-img = cv.imread("resources/Plate1.jpeg")
-'''
-cap = cv.VideoCapture("resources/Plate1.jpeg")
-cap.set(3, 640)
-cap.set(4, 480)
-cap.set(10,150)
+def scanning_image(path):
+	img = cv.imread(path)
+	#imgGray = cv.cvtColor(img, cv.COLOR_BGR2GRAY)
 
-success, img = cap.read()
-'''
-#imgGray = cv.cvtColor(img, cv.COLOR_BGR2GRAY)
-find_plate(img)
-#cv.imshow("car gray",imgGray)
-cv.imshow("car",img)
+	plate_img, roi_coords = find_plate(img)
 
-if cv.waitKey(0) & 0xFF == ord('q'):
-    cv.destroyAllWindows()       
+	#cv.imshow("car gray",imgGray)
+	cv.imshow("Plate",plate_img)
+	cv.imshow("car",img)
+
+	if cv.waitKey(0) & 0xFF == ord('q'):
+		cv.destroyAllWindows()  
+
+def scanning_video(path):
+	cap = cv.VideoCapture(path)
+	cap.set(3, 640)
+	cap.set(4, 480)
+	cap.set(10,150)
+
+	success, img = cap.read()
+	while success:
+		#imgGray = cv.cvtColor(img, cv.COLOR_BGR2GRAY)
+
+		plate_img, roi_coords = find_plate(img)
+
+		#cv.imshow("car gray",imgGray)
+		if plate_img is not None:
+			cv.imshow("Plate",plate_img)
+			cv.waitKey(0)
+			cv.destroyWindow('Plate')
+		cv.imshow("car",img)
+
+		success, img = cap.read()
+
+		if cv.waitKey(1) & 0xFF == ord('q'):
+   			cv.destroyAllWindows()  	
